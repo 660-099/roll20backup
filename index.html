@@ -38,11 +38,16 @@
         .image-table th, .image-table td {
             padding: 8px 4px;
             border-bottom: 1px solid #e5e7eb;
-            vertical-align: top;
+            vertical-align: middle;
         }
         .image-table th:first-child, .image-table td:first-child { width: 100px; }
-        .image-table th:nth-child(2), .image-table td:nth-child(2) { width: 40%; }
-        .image-table th:last-child, .image-table td:last-child { width: 40%; }
+        /* Name Color Table Styling */
+        .name-table th, .name-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: middle;
+            text-align: left;
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -97,11 +102,10 @@
                         HTML에서 이미지 목록 가져오기
                     </button>
 
-                    <div id="imageListContainer" class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-96 overflow-y-auto" style="display: none;">
+                    <div id="imageListContainer" class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-60 overflow-y-auto" style="display: none;">
                         <p id="imageStatus" class="text-sm text-gray-500">
-                            이미지 목록을 가져오려면 위에 코드를 입력하고 버튼을 클릭하세요.
+                            이미지 목록을 가져오려면 버튼을 클릭하세요.
                         </p>
-                        <!-- Dynamic Image Table will be rendered here -->
                     </div>
                 </div>
                 
@@ -121,6 +125,28 @@
                             <input type="checkbox" id="removeFontStyles" class="form-checkbox text-indigo-600 rounded">
                             <span class="ml-2">글꼴 스타일 제거</span>
                         </label>
+                    </div>
+                </div>
+
+                <!-- 4. Speaker Settings (New) -->
+                <div class="mb-6 border-t pt-4 mt-4 border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-3">대화명 설정</h2>
+                    
+                    <div class="space-y-2 mb-3">
+                        <label class="flex items-center text-gray-600 hover:text-indigo-600 transition duration-150">
+                            <input type="checkbox" id="addClassNames" class="form-checkbox text-indigo-600 rounded">
+                            <span class="ml-2">이름을 클래스로 변환</span>
+                        </label>
+                    </div>
+
+                    <button id="parseNamesButton" class="w-full py-2 bg-purple-500 text-white font-semibold rounded-lg hover:bg-purple-600 transition duration-150 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                        대화명 목록 가져오기
+                    </button>
+
+                    <div id="nameListContainer" class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-60 overflow-y-auto" style="display: none;">
+                        <p id="nameStatus" class="text-sm text-gray-500">
+                            대화명 목록을 가져오려면 버튼을 클릭하세요.
+                        </p>
                     </div>
                 </div>
 
@@ -157,19 +183,30 @@
         
         // Options
         const removeEmptyCheckbox = document.getElementById('removeEmpty');
-        // CSS 추출 옵션 변수 삭제됨
         
         const unifyBackgroundColors = document.getElementById('unifyBackgroundColors');
         const adjustTableWidth = document.getElementById('adjustTableWidth');
         const removeFontStylesCheckbox = document.getElementById('removeFontStyles');
+        
+        const addClassNamesCheckbox = document.getElementById('addClassNames');
 
         // Image Replacement
         const parseImagesButton = document.getElementById('parseImagesButton');
         const imageListContainer = document.getElementById('imageListContainer');
         
+        // Name Color Settings
+        const parseNamesButton = document.getElementById('parseNamesButton');
+        const nameListContainer = document.getElementById('nameListContainer');
+        
+        // State
         let imageReplacements = {}; 
+        let nameColorMap = {};
 
         // --- Core Utility Functions (Pure JS) ---
+
+        // Fix layout class issue
+        document.querySelector('h1').classList.add('text-4xl');
+        document.querySelector('h1').classList.remove('4xl');
 
         function formatHtmlLocally(html) {
             let formatLevel = 0;
@@ -227,13 +264,13 @@
 
             // --- 1. 문자열 기반 변환 (DOM 파싱 전) ---
             
-            // a. 배경색 통일 (String replacement)
+            // a. 배경색 통일
             if (unifyBackgroundColors.checked) {
                 transformedCode = transformedCode.replace(/rgb\(\s*211,\s*229,\s*245\s*\)/gi, 'rgb(241, 241, 241)');
                 transformedCode = transformedCode.replace(/rgb\(\s*177,\s*217,\s*250\s*\)/gi, 'rgb(225, 225, 225)');
             }
 
-            // b. 이미지 URL 교체 (String replacement)
+            // b. 이미지 URL 교체
             const replacements = Object.entries(imageReplacements).filter(([, updated]) => updated.length > 0);
             if (replacements.length > 0) {
                 replacements.forEach(([original, updated]) => {
@@ -265,18 +302,43 @@
                 });
             }
 
-            // --- 2. DOM 기반 변환 (CSS 추출 제외) ---
+            // --- 2. DOM 기반 변환 ---
 
             const parser = new DOMParser();
             const doc = parser.parseFromString(`<body>${transformedCode}</body>`, 'text/html');
             const targetBody = doc.body; 
+
+            // d. 대화명 처리 (클래스 변환 & 색상 적용)
+            // 이 로직은 span.by 요소를 대상으로 합니다.
+            if (addClassNamesCheckbox.checked || Object.keys(nameColorMap).length > 0) {
+                const spans = targetBody.querySelectorAll('span.by');
+                spans.forEach(span => {
+                    let text = span.textContent.trim();
+                    // 이름 정규화: 끝의 콜론 제거, 공백을 대시로
+                    let normalizedName = text.replace(/:$/, '').trim();
+                    let classNameSuffix = normalizedName.replace(/\s+/g, '-');
+                    
+                    if (normalizedName) {
+                        // 1. 이름을 클래스로 변환
+                        if (addClassNamesCheckbox.checked) {
+                            span.classList.remove('by');
+                            span.classList.add(`by-${classNameSuffix}`);
+                        }
+                        
+                        // 2. 색상 적용 (nameColorMap에 해당 이름이 있을 경우)
+                        if (nameColorMap[normalizedName]) {
+                            span.style.color = nameColorMap[normalizedName];
+                        }
+                    }
+                });
+            }
 
             const allElements = targetBody.querySelectorAll('*');
 
             allElements.forEach(el => {
                 const tagName = el.tagName.toLowerCase();
 
-                // d. 표 너비 조절
+                // e. 표 너비 조절
                 if (adjustTableWidth.checked && tagName === 'table') {
                     let style = el.getAttribute('style') || '';
                     style = style.replace(/width\s*:\s*[^;]+;?/gi, '');
@@ -287,10 +349,10 @@
                     el.setAttribute('style', style ? `${style}; ${newWidthStyle}` : newWidthStyle);
                 }
 
-                // e. 글꼴 스타일 제거 (Part 2: 인라인 스타일, div 태그만)
+                // f. 글꼴 스타일 제거 (Part 2: 인라인 스타일, div 태그만)
                 if (removeFontStylesCheckbox.checked && tagName === 'div') {
                     let style = el.getAttribute('style') || '';
-                    // font-family 속성 전체 제거
+                    // font-family, font-size 제거
                     style = style.replace(/font-family\s*:\s*[^;"]*["']?[^;]+;?/gi, '');
                     style = style.replace(/font-size\s*:\s*[^;]+;?/gi, '');
                     style = style.trim().replace(/;$/, '').trim(); 
@@ -303,7 +365,7 @@
                 }
             });
             
-            // f. 빈 속성 제거
+            // g. 빈 속성 제거
             if (removeEmptyCheckbox.checked) {
                 targetBody.querySelectorAll('*').forEach(el => {
                     Array.from(el.attributes).forEach(attr => {
@@ -394,8 +456,8 @@
                     <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
                         <tr>
                             <th scope="col" class="font-bold">미리보기</th>
-                            <th scope="col" class="font-bold">기존 URL (찾을 값)</th>
-                            <th scope="col" class="font-bold">새 URL (교체할 값)</th>
+                            <th scope="col" class="font-bold">기존 URL</th>
+                            <th scope="col" class="font-bold">새 URL</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -429,18 +491,88 @@
                     </tbody>
                 </table>
             `;
-            
-            const totalImages = images.length;
-            const uniqueCount = uniqueImages.length;
-            const summaryHTML = `
-                <p id="imageStatus" class="text-sm font-medium text-indigo-700 mt-2">
-                    총 ${totalImages}개의 &lt;img&gt; 태그에서 ${uniqueCount}개의 고유한 URL이 발견되었습니다.
-                </p>
-            `;
-
             imageListContainer.innerHTML = tableHTML;
-            imageListContainer.insertAdjacentHTML('afterbegin', summaryHTML);
             parseImagesButton.disabled = false;
+        }
+        
+        
+        // --- Name & Color Parsing Logic ---
+        
+        // Update color map when input changes
+        function updateNameColor(name, color) {
+            nameColorMap[name] = color;
+        }
+
+        function parseNamesAndRenderEditor() {
+            const code = inputCode.value.trim();
+            if (!code) {
+                nameListContainer.style.display = 'block';
+                nameListContainer.innerHTML = '<p id="nameStatus" class="text-sm text-red-500 font-medium">HTML 코드를 먼저 입력해주세요.</p>';
+                return;
+            }
+
+            parseNamesButton.disabled = true;
+            nameListContainer.style.display = 'block';
+            
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(`<body>${code}</body>`, 'text/html');
+            const spans = Array.from(doc.querySelectorAll('span.by'));
+            
+            const uniqueNames = new Set();
+            spans.forEach(span => {
+                let text = span.textContent.trim();
+                // 이름 정규화: 끝의 콜론 제거
+                let normalizedName = text.replace(/:$/, '').trim();
+                if (normalizedName) {
+                    uniqueNames.add(normalizedName);
+                }
+            });
+
+            const names = Array.from(uniqueNames).sort();
+            
+            if (names.length === 0) {
+                nameListContainer.innerHTML = `<p id="nameStatus" class="text-sm text-indigo-700 font-medium mt-2">
+                    대화명(span.by)을 찾을 수 없습니다.
+                </p>`;
+                parseNamesButton.disabled = false;
+                return;
+            }
+            
+            // Table Construction
+             let tableHTML = `
+                <table class="name-table w-full text-sm text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
+                        <tr>
+                            <th scope="col" class="font-bold">이름</th>
+                            <th scope="col" class="font-bold">색상 선택</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            names.forEach(name => {
+                // Default to black or existing value if re-parsing
+                const currentColor = nameColorMap[name] || '#000000';
+                
+                tableHTML += `
+                    <tr>
+                        <td class="font-medium text-gray-900">${name}</td>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <input type="color" 
+                                    class="p-0.5 h-8 w-14 block bg-white border border-gray-200 cursor-pointer rounded"
+                                    value="${currentColor}"
+                                    onchange="window.updateNameColor('${name}', this.value)">
+                                <span class="text-xs text-gray-500">색상을 선택하세요</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += `</tbody></table>`;
+            nameListContainer.innerHTML = tableHTML;
+            parseNamesButton.disabled = false;
         }
 
 
@@ -469,6 +601,7 @@
             if (trimmedValue !== '') {
                 statusMessage.textContent = '수정 및 형식 지정 준비 완료.';
                 parseImagesButton.disabled = false;
+                parseNamesButton.disabled = false;
             }
         }
 
@@ -477,11 +610,16 @@
         removeEmptyCheckbox.addEventListener('change', handleOptionChange);
         adjustTableWidth.addEventListener('change', handleOptionChange);
         removeFontStylesCheckbox.addEventListener('change', handleOptionChange);
+        addClassNamesCheckbox.addEventListener('change', handleOptionChange);
 
         parseImagesButton.addEventListener('click', parseImagesAndRenderEditor);
+        parseNamesButton.addEventListener('click', parseNamesAndRenderEditor);
         
         fixButton.disabled = inputCode.value.trim() === '';
+        
+        // Global expose for dynamic inputs
         window.updateReplacementMap = updateReplacementMap;
+        window.updateNameColor = updateNameColor;
     </script>
 </body>
 </html>
