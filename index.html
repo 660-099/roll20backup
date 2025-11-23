@@ -13,13 +13,12 @@
             min-height: 100vh;
         }
         .container {
-            max-width: 1400px;
+            max-width: 1600px; /* 미리보기 영역 확보를 위해 너비 확장 */
             margin: 0 auto;
             padding: 1rem;
         }
         textarea {
             resize: none;
-            min-height: 200px; 
             font-family: monospace;
             tab-size: 4;
             -moz-tab-size: 4;
@@ -32,15 +31,24 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
         }
         #outputCode {
-            min-height: 400px; 
+            min-height: 300px;
+        }
+        #previewFrame {
+            width: 100%;
+            min-height: 400px; /* 미리보기 높이 확보 */
+            border: none;
+            background-color: #ffffff;
+            border-radius: 0.5rem;
         }
         /* Dynamic Image Table Styling */
         .image-table th, .image-table td {
             padding: 8px 4px;
             border-bottom: 1px solid #e5e7eb;
-            vertical-align: middle;
+            vertical-align: top;
         }
         .image-table th:first-child, .image-table td:first-child { width: 100px; }
+        .image-table th:nth-child(2), .image-table td:nth-child(2) { width: 40%; }
+        .image-table th:last-child, .image-table td:last-child { width: 40%; }
         /* Name Color Table Styling */
         .name-table th, .name-table td {
             padding: 8px 12px;
@@ -55,7 +63,7 @@
     <div class="container py-8">
         <header class="text-center mb-6">
             <h1 class="text-4xl font-extrabold text-indigo-700 mb-2">HTML 코드 수정 및 형식 지정</h1>
-            <p class="text-gray-600">클라이언트 측 JavaScript로 즉시 코드를 수정하고 형식 지정합니다.</p>
+            <p class="text-gray-600">옵션을 선택하고 '선택 완료'를 눌러 결과를 확인하세요.</p>
         </header>
 
         <!-- Top Input Box -->
@@ -66,102 +74,110 @@
             <textarea id="inputCode" placeholder="여기에 HTML 코드를 붙여넣으세요." class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition duration-150"></textarea>
         </div>
 
-        <!-- Control and Status -->
-        <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-8">
-            <button id="fixButton" class="px-8 py-3 bg-indigo-600 text-white font-bold rounded-full shadow-lg hover:bg-indigo-700 transition duration-300 ease-in-out transform hover:scale-105 disabled:bg-indigo-400 disabled:cursor-not-allowed" disabled>
-                <span id="fixButtonText">코드 수정 및 형식 지정</span>
-            </button>
-            <div id="statusMessage" class="text-sm font-medium text-gray-600 transition duration-300">
-                시작하려면 위에 HTML 코드를 입력하세요.
-            </div>
-        </div>
-
-
         <main class="grid lg:grid-cols-4 gap-6">
 
-            <!-- Left Panel (1/4): Options -->
-            <div class="lg:col-span-1 code-panel bg-white p-6 rounded-xl border border-gray-200 h-full">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">수정 옵션</h2>
-                
-                <!-- 1. Code Cleanup -->
-                <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2">코드 정리</label>
-                    <div class="space-y-2">
-                        <label class="flex items-center text-gray-600 hover:text-indigo-600 transition duration-150">
-                            <input type="checkbox" id="removeEmpty" class="form-checkbox text-indigo-600 rounded">
-                            <span class="ml-2">빈 속성 제거</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- 2. Image URL Replacement -->
-                <div class="mb-6 border-t pt-4 mt-4 border-gray-200">
-                    <h2 class="text-xl font-semibold text-gray-700 mb-3">이미지 URL 교체</h2>
+            <!-- Left Panel (1/4): Options & Action -->
+            <div class="lg:col-span-1 flex flex-col gap-6">
+                <div class="code-panel bg-white p-6 rounded-xl border border-gray-200 h-full">
+                    <h2 class="text-2xl font-semibold text-gray-700 mb-4">수정 옵션</h2>
                     
-                    <button id="parseImagesButton" class="w-full py-2 bg-pink-500 text-white font-semibold rounded-lg hover:bg-pink-600 transition duration-150 disabled:bg-gray-400 disabled:cursor-not-allowed">
-                        HTML에서 이미지 목록 가져오기
-                    </button>
-
-                    <div id="imageListContainer" class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-60 overflow-y-auto" style="display: none;">
-                        <p id="imageStatus" class="text-sm text-gray-500">
-                            이미지 목록을 가져오려면 버튼을 클릭하세요.
-                        </p>
+                    <!-- 1. Code Cleanup -->
+                    <div class="mb-6">
+                        <label class="block text-gray-700 font-medium mb-2">코드 정리</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center text-gray-600 hover:text-indigo-600 transition duration-150">
+                                <input type="checkbox" id="removeEmpty" class="form-checkbox text-indigo-600 rounded">
+                                <span class="ml-2">빈 속성 제거</span>
+                            </label>
+                            <label class="flex items-center text-gray-600 hover:text-indigo-600 transition duration-150">
+                                <input type="checkbox" id="extractInlineStyles" class="form-checkbox text-indigo-600 rounded">
+                                <span class="ml-2">인라인 스타일 CSS로 추출</span>
+                            </label>
+                        </div>
                     </div>
-                </div>
-                
-                <!-- 3. Design Adjustments -->
-                <div class="mb-6 border-t pt-4 mt-4 border-gray-200">
-                    <label class="block text-gray-700 font-medium mb-2">디자인</label>
-                    <div class="space-y-2">
-                        <label class="flex items-center text-gray-600 font-medium cursor-pointer hover:text-indigo-600 transition duration-150">
-                            <input type="checkbox" id="unifyBackgroundColors" class="form-checkbox text-indigo-600 rounded">
-                            <span class="ml-2">배경색 통일</span>
-                        </label>
-                        <label class="flex items-center text-gray-600 font-medium cursor-pointer hover:text-indigo-600 transition duration-150">
-                            <input type="checkbox" id="adjustTableWidth" class="form-checkbox text-indigo-600 rounded">
-                            <span class="ml-2">표 너비 조절</span>
-                        </label>
-                         <label class="flex items-center text-gray-600 hover:text-indigo-600 transition duration-150">
-                            <input type="checkbox" id="removeFontStyles" class="form-checkbox text-indigo-600 rounded">
-                            <span class="ml-2">글꼴 스타일 제거</span>
-                        </label>
-                    </div>
-                </div>
 
-                <!-- 4. Speaker Settings (New) -->
-                <div class="mb-6 border-t pt-4 mt-4 border-gray-200">
-                    <h2 class="text-xl font-semibold text-gray-700 mb-3">대화명 설정</h2>
+                    <!-- 2. Image URL Replacement -->
+                    <div class="mb-6 border-t pt-4 mt-4 border-gray-200">
+                        <h2 class="text-xl font-semibold text-gray-700 mb-3">이미지 URL 교체</h2>
+                        
+                        <button id="parseImagesButton" class="w-full py-2 bg-pink-500 text-white font-semibold rounded-lg hover:bg-pink-600 transition duration-150 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                            HTML에서 이미지 목록 가져오기
+                        </button>
+
+                        <div id="imageListContainer" class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-60 overflow-y-auto" style="display: none;">
+                            <p id="imageStatus" class="text-sm text-gray-500">
+                                이미지 목록을 가져오려면 위에 코드를 입력하고 버튼을 클릭하세요.
+                            </p>
+                        </div>
+                    </div>
                     
-                    <div class="space-y-2 mb-3">
-                        <label class="flex items-center text-gray-600 hover:text-indigo-600 transition duration-150">
-                            <input type="checkbox" id="addClassNames" class="form-checkbox text-indigo-600 rounded">
-                            <span class="ml-2">이름을 클래스로 변환</span>
-                        </label>
+                    <!-- 3. Design Adjustments -->
+                    <div class="mb-6 border-t pt-4 mt-4 border-gray-200">
+                        <label class="block text-gray-700 font-medium mb-2">디자인</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center text-gray-600 font-medium cursor-pointer hover:text-indigo-600 transition duration-150">
+                                <input type="checkbox" id="unifyBackgroundColors" class="form-checkbox text-indigo-600 rounded">
+                                <span class="ml-2">배경색 통일</span>
+                            </label>
+                            <label class="flex items-center text-gray-600 font-medium cursor-pointer hover:text-indigo-600 transition duration-150">
+                                <input type="checkbox" id="adjustTableWidth" class="form-checkbox text-indigo-600 rounded">
+                                <span class="ml-2">표 너비 조절</span>
+                            </label>
+                             <label class="flex items-center text-gray-600 hover:text-indigo-600 transition duration-150">
+                                <input type="checkbox" id="removeFontStyles" class="form-checkbox text-indigo-600 rounded">
+                                <span class="ml-2">글꼴 스타일 제거</span>
+                            </label>
+                        </div>
                     </div>
 
-                    <button id="parseNamesButton" class="w-full py-2 bg-purple-500 text-white font-semibold rounded-lg hover:bg-purple-600 transition duration-150 disabled:bg-gray-400 disabled:cursor-not-allowed">
-                        대화명 목록 가져오기
-                    </button>
+                    <!-- 4. Speaker Settings -->
+                    <div class="mb-6 border-t pt-4 mt-4 border-gray-200">
+                        <h2 class="text-xl font-semibold text-gray-700 mb-3">대화명 설정</h2>
+                        
+                        <div class="space-y-2 mb-3">
+                            <label class="flex items-center text-gray-600 hover:text-indigo-600 transition duration-150">
+                                <input type="checkbox" id="addClassNames" class="form-checkbox text-indigo-600 rounded">
+                                <span class="ml-2">이름을 클래스로 변환</span>
+                            </label>
+                        </div>
 
-                    <div id="nameListContainer" class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-60 overflow-y-auto" style="display: none;">
-                        <p id="nameStatus" class="text-sm text-gray-500">
-                            대화명 목록을 가져오려면 버튼을 클릭하세요.
-                        </p>
+                        <button id="parseNamesButton" class="w-full py-2 bg-purple-500 text-white font-semibold rounded-lg hover:bg-purple-600 transition duration-150 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                            대화명 목록 가져오기
+                        </button>
+
+                        <div id="nameListContainer" class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-60 overflow-y-auto" style="display: none;">
+                            <p id="nameStatus" class="text-sm text-gray-500">
+                                대화명 목록을 가져오려면 버튼을 클릭하세요.
+                            </p>
+                        </div>
                     </div>
+                    
+                    <!-- Action Button (Moved to bottom of options) -->
+                    <div class="mt-8 pt-6 border-t border-gray-200">
+                        <button id="fixButton" class="w-full px-8 py-4 bg-indigo-600 text-white font-bold text-lg rounded-lg shadow-lg hover:bg-indigo-700 transition duration-300 ease-in-out transform hover:scale-105 disabled:bg-indigo-400 disabled:cursor-not-allowed disabled:transform-none" disabled>
+                            <span id="fixButtonText">선택 완료</span>
+                        </button>
+                        <div id="statusMessage" class="text-sm font-medium text-gray-600 text-center mt-3 transition duration-300">
+                            시작하려면 위에 HTML 코드를 입력하세요.
+                        </div>
+                    </div>
+
                 </div>
-
-                <p class="text-sm text-gray-500 mt-4 italic">
-                    <span class="font-semibold">모든 기능은</span> 클라이언트 측 JavaScript로 즉시 처리됩니다.
-                </p>
             </div>
 
-            <!-- Right Panel (3/4): Output -->
+            <!-- Right Panel (3/4): Preview and Output -->
             <div class="lg:col-span-3 space-y-6">
                 
+                <!-- Preview View (Added) -->
+                <div class="code-panel bg-white p-6 rounded-xl border border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-3">미리보기</h2>
+                    <iframe id="previewFrame" title="Live HTML Preview" class="rounded-lg shadow-inner border border-gray-300"></iframe>
+                </div>
+
                 <!-- Formatted Code View -->
                 <div class="code-panel bg-white p-6 rounded-xl border border-gray-200">
                     <h2 class="text-xl font-semibold text-gray-700 mb-3">형식 지정된 코드</h2>
-                    <textarea id="outputCode" readonly placeholder="수정되고 형식 지정된 HTML이 여기에 표시됩니다." class="w-full p-4 border border-gray-300 bg-gray-50 rounded-lg" aria-live="polite"></textarea>
+                    <textarea id="outputCode" readonly placeholder="'선택 완료' 버튼을 누르면 결과 코드가 여기에 표시됩니다." class="w-full p-4 border border-gray-300 bg-gray-50 rounded-lg" aria-live="polite"></textarea>
                     <button id="copyButton" class="mt-3 w-full py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition duration-150">
                         클립보드에 복사
                     </button>
@@ -179,10 +195,12 @@
         const fixButton = document.getElementById('fixButton');
         const fixButtonText = document.getElementById('fixButtonText');
         const statusMessage = document.getElementById('statusMessage');
+        const previewFrame = document.getElementById('previewFrame');
         const copyButton = document.getElementById('copyButton');
         
         // Options
         const removeEmptyCheckbox = document.getElementById('removeEmpty');
+        const extractInlineStylesCheckbox = document.getElementById('extractInlineStyles');
         
         const unifyBackgroundColors = document.getElementById('unifyBackgroundColors');
         const adjustTableWidth = document.getElementById('adjustTableWidth');
@@ -203,10 +221,6 @@
         let nameColorMap = {};
 
         // --- Core Utility Functions (Pure JS) ---
-
-        // Fix layout class issue
-        document.querySelector('h1').classList.add('text-4xl');
-        document.querySelector('h1').classList.remove('4xl');
 
         function formatHtmlLocally(html) {
             let formatLevel = 0;
@@ -309,23 +323,19 @@
             const targetBody = doc.body; 
 
             // d. 대화명 처리 (클래스 변환 & 색상 적용)
-            // 이 로직은 span.by 요소를 대상으로 합니다.
             if (addClassNamesCheckbox.checked || Object.keys(nameColorMap).length > 0) {
                 const spans = targetBody.querySelectorAll('span.by');
                 spans.forEach(span => {
                     let text = span.textContent.trim();
-                    // 이름 정규화: 끝의 콜론 제거, 공백을 대시로
                     let normalizedName = text.replace(/:$/, '').trim();
                     let classNameSuffix = normalizedName.replace(/\s+/g, '-');
                     
                     if (normalizedName) {
-                        // 1. 이름을 클래스로 변환
                         if (addClassNamesCheckbox.checked) {
                             span.classList.remove('by');
                             span.classList.add(`by-${classNameSuffix}`);
                         }
                         
-                        // 2. 색상 적용 (nameColorMap에 해당 이름이 있을 경우)
                         if (nameColorMap[normalizedName]) {
                             span.style.color = nameColorMap[normalizedName];
                         }
@@ -352,7 +362,6 @@
                 // f. 글꼴 스타일 제거 (Part 2: 인라인 스타일, div 태그만)
                 if (removeFontStylesCheckbox.checked && tagName === 'div') {
                     let style = el.getAttribute('style') || '';
-                    // font-family, font-size 제거
                     style = style.replace(/font-family\s*:\s*[^;"]*["']?[^;]+;?/gi, '');
                     style = style.replace(/font-size\s*:\s*[^;]+;?/gi, '');
                     style = style.trim().replace(/;$/, '').trim(); 
@@ -365,7 +374,42 @@
                 }
             });
             
-            // g. 빈 속성 제거
+            // g. 인라인 스타일 CSS로 추출
+            if (extractInlineStylesCheckbox.checked) {
+                const styleMap = new Map();
+                let classCounter = 1;
+
+                const elementsWithStyle = targetBody.querySelectorAll('*[style]');
+                
+                elementsWithStyle.forEach(el => {
+                    let style = el.getAttribute('style');
+                    style = style.split(';').map(s => s.trim()).filter(s => s).sort().join('; ') + ';';
+                    
+                    if (!style || style === ';') return;
+
+                    let className;
+                    if (styleMap.has(style)) {
+                        className = styleMap.get(style);
+                    } else {
+                        className = `gen-style-${classCounter++}`;
+                        styleMap.set(style, className);
+                    }
+
+                    el.classList.add(className);
+                    el.removeAttribute('style');
+                });
+
+                if (styleMap.size > 0) {
+                    let cssBlock = '\n<style>\n';
+                    styleMap.forEach((className, styleStr) => {
+                        cssBlock += `.${className} { ${styleStr} }\n`;
+                    });
+                    cssBlock += '</style>\n';
+                    targetBody.innerHTML = cssBlock + targetBody.innerHTML;
+                }
+            }
+
+            // h. 빈 속성 제거
             if (removeEmptyCheckbox.checked) {
                 targetBody.querySelectorAll('*').forEach(el => {
                     Array.from(el.attributes).forEach(attr => {
@@ -379,6 +423,33 @@
             // 3. 최종 직렬화
             let finalFragment = targetBody.innerHTML; 
             return formatHtmlLocally(finalFragment); 
+        }
+
+        // Function to update the live HTML preview in the iframe
+        function updatePreview(htmlContent) {
+            const doc = previewFrame.contentWindow.document;
+            doc.open();
+            
+            // 미리보기에는 포맷팅된 코드 + 기본 스타일을 적용
+            doc.write(`
+                <!DOCTYPE html>
+                <html lang="ko">
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        /* 미리보기 스타일: 기본 폰트 및 테이블 테두리 적용 */
+                        body { margin: 10px; font-family: 'Inter', sans-serif; }
+                        table { border-collapse: collapse; width: 100%; } 
+                        th, td { border: 1px solid #ccc; padding: 5px; }
+                        table[style*="width: 100%"] { width: 100% !important; }
+                    </style>
+                </head>
+                <body>
+                    ${htmlContent}
+                </body>
+                </html>
+            `);
+            doc.close();
         }
 
         // --- Main Action ---
@@ -397,9 +468,13 @@
             setTimeout(() => {
                 const formattedAndCleanedCode = applyLocalTransformations(rawCode, true);
                 outputCode.value = formattedAndCleanedCode;
+                
+                // **여기서 미리보기 업데이트 (선택 완료 버튼 눌렀을 때만)**
+                updatePreview(formattedAndCleanedCode);
+
                 statusMessage.textContent = '코드가 성공적으로 수정 및 형식 지정되었습니다!';
                 fixButton.disabled = false;
-                fixButtonText.textContent = '코드 수정 및 형식 지정';
+                fixButtonText.textContent = '선택 완료';
             }, 50);
         }
 
@@ -598,6 +673,7 @@
         function handleOptionChange() {
             const trimmedValue = inputCode.value.trim();
             fixButton.disabled = trimmedValue === '';
+            
             if (trimmedValue !== '') {
                 statusMessage.textContent = '수정 및 형식 지정 준비 완료.';
                 parseImagesButton.disabled = false;
@@ -606,11 +682,10 @@
         }
 
         inputCode.addEventListener('input', handleOptionChange);
-        unifyBackgroundColors.addEventListener('change', handleOptionChange);
-        removeEmptyCheckbox.addEventListener('change', handleOptionChange);
-        adjustTableWidth.addEventListener('change', handleOptionChange);
-        removeFontStylesCheckbox.addEventListener('change', handleOptionChange);
-        addClassNamesCheckbox.addEventListener('change', handleOptionChange);
+        
+        // 실시간 미리보기 이벤트 리스너 제거 (선택 완료 버튼으로 통합됨)
+        // unifyBackgroundColors.addEventListener('change', handleOptionChange);
+        // ...
 
         parseImagesButton.addEventListener('click', parseImagesAndRenderEditor);
         parseNamesButton.addEventListener('click', parseNamesAndRenderEditor);
